@@ -4,6 +4,10 @@ import numpy as np
 import cv2
 import os
 import argparse
+import logging
+import time
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
 def prompt():
     parser = argparse.ArgumentParser(description="Image classification with OpenCV DNN")
@@ -39,11 +43,38 @@ def main():
         if not os.path.exists(args.labels):
             raise FileNotFoundError(f"Error: Labels file does not exist - {args.labels}")
 
+        # load image
         image_ndarray = load_image(args.image)
-        print(f"Image type: {type(image_ndarray)} and shape: {image_ndarray.shape}")
+        logging.debug(f"Image type: {type(image_ndarray)} and shape: {image_ndarray.shape}")
 
+        # load class labels
         classes = load_classes(args.labels)
-        print(f"Classes: {classes}")
+        logging.debug(f"Classes: {classes}")
+
+        # load pre-trained model
+        net = cv2.dnn.readNetFromCaffe(args.config, args.model)
+
+        # pre-process: convert to blob
+        blob = cv2.dnn.blobFromImage(image_ndarray, scalefactor=1.0, size=(224, 224), mean=(104, 117, 123))
+
+        # perform inference
+        net.setInput(blob)
+
+        # forward pass
+        start_time = time.time()
+        output = net.forward()
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        logging.info(f"Elapsed time: {elapsed_time:.4f} seconds")
+
+        # print top prediction
+        idx = np.argsort(output[0])[::-1][:1]
+        logging.info(f"Top prediction: {classes[idx[0]]} with probability: {output[0][idx[0]]:.2f}")
+
+        # display image
+        cv2.imshow("Image", image_ndarray)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     except FileNotFoundError as e:
         print(f"[File Error]: {str(e)}")
