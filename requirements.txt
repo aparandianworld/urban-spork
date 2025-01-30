@@ -1,0 +1,5 @@
+numpy
+opencv-contrib-python
+dlib
+cmake 
+Pillow
